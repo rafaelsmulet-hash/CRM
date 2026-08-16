@@ -20,6 +20,6 @@ __pycache__/
 venv/
 *.egg-info/
 
-# Exportações de revisão
+# Exportações de revisão (podem conter dados de clientes)
+pendentes*.csv
 *.xlsx
-!tests/**/*.xlsx

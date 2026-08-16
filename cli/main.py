@@ -3,9 +3,9 @@
 
 Uso (a partir da raiz do projeto):
     python cli/main.py init-db
-    python cli/main.py importar --arquivo data/inbox/export_2026-08-16.xlsx
+    python cli/main.py importar --arquivo data/inbox/export_2026-08-16.csv
     python cli/main.py listar-pendentes
-    python cli/main.py exportar-pendentes --saida pendentes.xlsx
+    python cli/main.py exportar-pendentes --saida pendentes.csv
     python cli/main.py revisar --id 12 --usuario "rafael" --status revisado
     python cli/main.py backup-db
 
@@ -100,7 +100,7 @@ def cmd_listar_pendentes(args, cfg):
 
 
 def cmd_exportar_pendentes(args, cfg):
-    import pandas as pd
+    import csv
 
     conn = get_connection(cfg["_db_path_absoluto"])
     try:
@@ -108,12 +108,18 @@ def cmd_exportar_pendentes(args, cfg):
     finally:
         conn.close()
 
-    df = pd.DataFrame([dict(row) for row in pendentes])
-    if df.empty:
+    if not pendentes:
         print("Nenhum follow-up pendente para exportar.")
         return
-    df.to_excel(args.saida, index=False)
-    print(f"Exportado {len(df)} follow-up(s) pendente(s) para: {args.saida}")
+
+    colunas = pendentes[0].keys()
+    with open(args.saida, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=colunas)
+        writer.writeheader()
+        for row in pendentes:
+            writer.writerow(dict(row))
+    print(f"Exportado {len(pendentes)} follow-up(s) pendente(s) para: {args.saida}")
+    print("(Abra normalmente no Excel — codificação utf-8-sig evita acentos quebrados.)")
 
 
 def cmd_revisar(args, cfg):
@@ -159,12 +165,12 @@ def montar_parser():
     sub.add_parser("init-db", help="Cria o banco SQLite e as tabelas, se não existirem.")
 
     p_importar = sub.add_parser("importar", help="Importa um arquivo Excel/CSV e roda o motor de regras.")
-    p_importar.add_argument("--arquivo", required=True, help="Caminho do arquivo .xlsx/.xls/.csv a importar.")
+    p_importar.add_argument("--arquivo", required=True, help="Caminho do arquivo .csv a importar.")
 
     sub.add_parser("listar-pendentes", help="Lista os follow-ups pendentes de revisão no terminal.")
 
-    p_export = sub.add_parser("exportar-pendentes", help="Exporta os follow-ups pendentes para um arquivo Excel.")
-    p_export.add_argument("--saida", required=True, help="Caminho do arquivo .xlsx de saída.")
+    p_export = sub.add_parser("exportar-pendentes", help="Exporta os follow-ups pendentes para um arquivo CSV (abre no Excel).")
+    p_export.add_argument("--saida", required=True, help="Caminho do arquivo .csv de saída.")
 
     p_revisar = sub.add_parser("revisar", help="Marca um follow-up como revisado/enviado (registra auditoria).")
     p_revisar.add_argument("--id", type=int, required=True, help="ID do follow_up (ver listar-pendentes).")

@@ -132,10 +132,10 @@ def executar_importacao(conn, caminho_arquivo, mapeamento: dict, rules_config: d
     caminho_arquivo = Path(caminho_arquivo)
     resultado = ResultadoImportacao(str(caminho_arquivo.name))
 
-    df = ler_arquivo(caminho_arquivo)  # levanta ArquivoInvalidoError se estrutural
+    colunas_arquivo, linhas_arquivo = ler_arquivo(caminho_arquivo)  # levanta ArquivoInvalidoError se estrutural
 
     colunas_mapeadas = mapeamento.get("colunas", {})
-    faltando = validar_colunas_presentes(df.columns.tolist(), colunas_mapeadas)
+    faltando = validar_colunas_presentes(colunas_arquivo, colunas_mapeadas)
     if faltando:
         raise ArquivoInvalidoError(
             "Colunas obrigatórias ausentes no arquivo: " + "; ".join(faltando)
@@ -148,7 +148,7 @@ def executar_importacao(conn, caminho_arquivo, mapeamento: dict, rules_config: d
 
     conn.execute("BEGIN")
     try:
-        for idx, linha in enumerate(df.to_dict(orient="records"), start=2):  # linha 2 = primeira linha de dados (após cabeçalho)
+        for idx, linha in enumerate(linhas_arquivo, start=2):  # linha 2 = primeira linha de dados (após cabeçalho)
             resultado.linhas_processadas += 1
             try:
                 registro, avisos = extrair_linha(linha, colunas_mapeadas, formato_data, separador_decimal)

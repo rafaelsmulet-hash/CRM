@@ -1,11 +1,18 @@
 """Geração de mensagens 100% por template parametrizado — sem LLM, local ou
-externo. Saída determinística e auditável: a mesma operação + o mesmo motivo
-sempre geram exatamente a mesma mensagem."""
+externo, e sem nenhuma biblioteca de terceiros (só `pathlib`/`unicodedata`
+da biblioteca padrão). Saída determinística e auditável: a mesma operação +
+o mesmo motivo sempre geram exatamente a mesma mensagem.
+
+Cada template é um arquivo .txt simples em templates/mensagens/, nomeado
+pelo "slug" do tipo_estrutura (ex.: capital_protegido.txt). Um arquivo
+default.txt é obrigatório e é usado quando não há template específico para
+o tipo_estrutura da operação. Qualquer pessoa (inclusive Compliance) pode
+editar esses .txt diretamente, sem precisar mexer em código Python.
+"""
 from pathlib import Path
 import unicodedata
-import yaml
 
-TEMPLATES_PATH = Path(__file__).parent / "templates.yaml"
+TEMPLATES_DIR = Path(__file__).parent / "mensagens"
 
 
 class _ContextoComFallback(dict):
@@ -26,11 +33,14 @@ def _slugify(valor: str) -> str:
 
 
 def carregar_templates() -> dict:
-    with open(TEMPLATES_PATH, "r", encoding="utf-8") as f:
-        dados = yaml.safe_load(f) or {}
-    if "default" not in dados:
-        raise ValueError("templates.yaml precisa ter obrigatoriamente uma entrada 'default'.")
-    return dados
+    templates = {}
+    for arquivo in sorted(TEMPLATES_DIR.glob("*.txt")):
+        templates[arquivo.stem] = arquivo.read_text(encoding="utf-8")
+    if "default" not in templates:
+        raise ValueError(
+            f"templates/mensagens/default.txt é obrigatório e não foi encontrado em {TEMPLATES_DIR}."
+        )
+    return templates
 
 
 def _ou_nd(valor):

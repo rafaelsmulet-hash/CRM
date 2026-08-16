@@ -1,3 +1,7 @@
-pandas>=2.0,<3.0
-openpyxl>=3.1,<4.0
-PyYAML>=6.0,<7.0
+# Este projeto usa exclusivamente a biblioteca padrão do Python (3.11+):
+# sqlite3, csv, configparser, hashlib, unicodedata, datetime, pathlib,
+# argparse, shutil, json. Não há NENHUMA dependência de terceiros e,
+# portanto, nenhum "pip install" é necessário — nem mesmo na instalação
+# inicial. Este arquivo existe apenas como documentação explícita dessa
+# escolha de design (rodar em ambiente air-gapped, sem contato com nenhum
+# servidor externo, nunca).

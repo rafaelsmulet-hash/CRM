@@ -1,6 +1,0 @@
-# Configurações gerais do sistema. Todos os caminhos são relativos à raiz do
-# projeto (o diretório que contém este arquivo config/).
-db_path: "crm_derivativos.db"
-diretorio_inbox: "data/inbox"
-diretorio_processados: "data/processed"
-diretorio_backups: "backups"
