@@ -1,0 +1,38 @@
+# Mapeamento de colunas do arquivo de origem (Excel/CSV exportado do sistema
+# interno) para os campos canônicos usados internamente pelo sistema.
+#
+# COMO AJUSTAR: a CHAVE de cada linha abaixo é o nome canônico interno (não
+# mexer). O VALOR é o nome EXATO da coluna como ela aparece no cabeçalho do
+# seu arquivo. Se o seu sistema exporta "ID Cliente" em vez de "cliente_id",
+# basta trocar o valor correspondente.
+#
+# Campos marcados como opcionais podem ficar com valor vazio ("") se a coluna
+# não existir no seu arquivo.
+
+colunas:
+  # --- obrigatórios ---
+  cliente_id: "cliente_id"
+  nome: "nome"
+  tipo_estrutura: "tipo_estrutura"
+  ativo_objeto: "ativo_objeto"
+  data_fechamento: "data_fechamento"
+  data_vencimento: "data_vencimento"
+
+  # --- opcionais ---
+  operacao_id: "operacao_id"          # se ausente/vazio, um ID sintético e estável é gerado (ver importer/validators.py)
+  strike_1: "strike_1"
+  strike_2: "strike_2"
+  barreira: "barreira"
+  status_barreira: "status_barreira"
+  valor_notional: "valor_notional"
+  perfil_suitability: "perfil_suitability"
+
+# Formato das datas no arquivo de origem (sintaxe de datetime.strptime).
+# Exemplos comuns: "%d/%m/%Y" (31/12/2026), "%Y-%m-%d" (2026-12-31).
+# Se a data não bater com este formato, o importador tenta ISO-8601 como
+# fallback antes de marcar a linha como erro.
+formato_data: "%d/%m/%Y"
+
+# Separador decimal usado nos campos numéricos do arquivo de origem.
+# "," (padrão brasileiro, ex: 1.234,56) ou "." (padrão internacional, ex: 1234.56)
+separador_decimal: ","

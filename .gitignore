@@ -1,0 +1,25 @@
+# Banco de dados local (contém dados de clientes - nunca versionar)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Backups do banco
+backups/*.db
+
+# Arquivos de importação (podem conter dados de clientes)
+data/inbox/*
+!data/inbox/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Exportações de revisão
+*.xlsx
+!tests/**/*.xlsx

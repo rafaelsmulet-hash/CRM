@@ -1,0 +1,65 @@
+# Templates de mensagem por tipo_estrutura. Este arquivo pode ser revisado e
+# aprovado por Compliance sem precisar mexer em código Python.
+#
+# A chave de cada template é o "slug" do tipo_estrutura (minúsculo, sem
+# acento, espaços viram "_"). Ex.: "Capital Protegido" -> capital_protegido.
+# Se o tipo_estrutura da operação não tiver um template correspondente aqui,
+# o template "default" é usado.
+#
+# Placeholders disponíveis em qualquer template:
+#   {cliente} {nome}            - nome do cliente
+#   {codigo}                    - código do cliente no sistema de origem
+#   {tipo_estrutura}            - tipo da estrutura
+#   {ativo_objeto}               - ativo-objeto da operação
+#   {data_fechamento}            - data de fechamento (YYYY-MM-DD)
+#   {data_vencimento}            - data de vencimento (YYYY-MM-DD)
+#   {dias_restantes}             - dias até o vencimento (ou "N/D")
+#   {strike_1} {strike_2}        - strikes (ou "N/D")
+#   {barreira}                   - nível de barreira (ou "N/D")
+#   {status_barreira}            - status atual da barreira (ou "N/D")
+#   {valor_notional}             - valor notional (ou "N/D")
+#   {motivo_disparo}             - motivo textual que gerou o follow-up
+#
+# Um placeholder digitado errado aparece na mensagem gerada como [nome?],
+# em vez de quebrar a geração — assim o erro fica visível na revisão manual.
+
+default: |
+  Prezado(a) {nome},
+
+  Passando para falar sobre sua operação de {tipo_estrutura} referenciada em {ativo_objeto},
+  contratada em {data_fechamento} e com vencimento em {data_vencimento} ({dias_restantes} dia(s) restante(s)).
+
+  Motivo do contato: {motivo_disparo}
+
+  Fico à disposição para conversarmos.
+
+capital_protegido: |
+  Prezado(a) {nome},
+
+  Passando para falar sobre sua operação de Capital Protegido em {ativo_objeto},
+  contratada em {data_fechamento}, com vencimento em {data_vencimento} ({dias_restantes} dia(s) restante(s))
+  e valor notional de {valor_notional}.
+
+  Motivo do contato: {motivo_disparo}
+
+  Fico à disposição para qualquer dúvida.
+
+autocall: |
+  Prezado(a) {nome},
+
+  Passando para falar sobre sua operação Autocall em {ativo_objeto} — barreira em {barreira},
+  status atual: {status_barreira} — com vencimento em {data_vencimento} ({dias_restantes} dia(s) restante(s)).
+
+  Motivo do contato: {motivo_disparo}
+
+  Fico à disposição para conversarmos sobre os próximos passos.
+
+dual_currency: |
+  Prezado(a) {nome},
+
+  Passando para falar sobre sua operação Dual Currency em {ativo_objeto}, com strikes
+  {strike_1} / {strike_2} e vencimento em {data_vencimento} ({dias_restantes} dia(s) restante(s)).
+
+  Motivo do contato: {motivo_disparo}
+
+  Fico à disposição para qualquer dúvida.
