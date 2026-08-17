@@ -1,7 +1,7 @@
 """Validação e conversão de tipos linha a linha (tratamento de erros).
 
 Filosofia: erros em campos OBRIGATÓRIOS derrubam a linha inteira (ela não é
-importada, e o motivo fica registrado em log_importacoes.detalhes_erros).
+importada, e o motivo fica registrado em log_importacoes.detalhes).
 Erros em campos OPCIONAIS não derrubam a linha: o campo fica None e um aviso
 é registrado, mas a operação continua sendo importada — clareza de auditoria
 é priorizada sobre "esconder" dados incompletos.

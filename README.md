@@ -1,251 +1,253 @@
-# Follow-up de Operações Estruturadas com Derivativos
+# Jarvis — Assistente pessoal de mesa para follow-up de derivativos
 
-Sistema local, **100% offline e air-gapped**, para identificar diariamente
-quais operações estruturadas (capital protegido, autocall, dual currency
-etc.) da carteira precisam de follow-up com o cliente, e gerar uma
-**mensagem pronta a partir de templates** para revisão manual.
+Ferramenta **pessoal** de produtividade para um Sales Trader que precisa
+identificar, todo dia, quais operações estruturadas com derivativos
+(capital protegido, autocall, dual currency etc.) merecem um follow-up com
+o cliente — e preparar um **rascunho de mensagem** pronto para revisão
+manual.
 
-**O sistema nunca envia nada sozinho.** Ele só lê um arquivo local, atualiza
-um banco SQLite local, aplica regras determinísticas e produz mensagens a
-partir de templates fixos. Toda mensagem passa por revisão humana antes de
-ser considerada "enviada" (e o envio em si é sempre manual, fora do sistema).
+## Escopo (leia antes de tudo)
+
+- **Jarvis é read-only em relação à operação.** Ele só reflete dados
+  extraídos manualmente do CRM oficial da corretora. **Nunca é fonte da
+  verdade.** Toda linha das tabelas operacionais carrega `fonte_extracao`
+  (nome do arquivo) e `data_extracao` (timestamp), deixando explícito que é
+  um espelho, não o dado original.
+- **Nenhuma ação de negócio real acontece aqui.** O Jarvis não fecha
+  operação, não registra contato oficial, não envia nada sozinho.
+- **Mensagens geradas são RASCUNHOS pessoais.** O registro formal de
+  contato com o cliente continua no sistema homologado da corretora.
+- **Usuário único.** Sem autenticação, sem permissões multiusuário —
+  é uma ferramenta pessoal de mesa, não um sistema compartilhado.
+- **100% offline, zero dependências de terceiros.** Nenhuma chamada de
+  rede, API externa, telemetria, ou biblioteca de terceiros — nem mesmo
+  para instalar (ver seção abaixo). Nenhum LLM (local ou externo) gera
+  texto: tudo por templates parametrizados, para saída previsível e
+  auditável.
+
+Se alguma vez você pedir uma funcionalidade que pareça fechar essa fronteira
+read-only (por exemplo, "marcar como contatado no CRM" ou "enviar
+automaticamente"), o Jarvis deve recusar/perguntar antes de implementar —
+essa é uma regra de escopo inegociável do projeto.
 
 ## Zero dependências, zero rede — inclusive na instalação
 
 Este projeto usa **exclusivamente a biblioteca padrão do Python 3.11+**
 (`sqlite3`, `csv`, `configparser`, `hashlib`, `unicodedata`, `datetime`,
-`pathlib`, `argparse`, `shutil`, `json`). Não há `pandas`, `openpyxl`,
-`PyYAML` nem nenhuma outra biblioteca de terceiros.
+`pathlib`, `argparse`, `shutil`, `json`, `subprocess`, `tempfile`). Não há
+`pandas` nem qualquer outra biblioteca de terceiros — mesmo que a stack
+sugerida originalmente mencionasse `pandas`, mantive a base 100% biblioteca
+padrão porque o ambiente de uso não pode acessar nenhum servidor externo,
+nem mesmo para um `pip install` inicial.
 
-Na prática isso significa:
+Copie a pasta do projeto para a máquina onde vai usar e confirme que o
+Python está disponível:
 
-- **Nenhum `pip install` é necessário**, nem mesmo na primeira execução —
-  basta ter o interpretador Python 3.11+ já instalado na máquina.
-- **Nenhum contato com PyPI, GitHub ou qualquer servidor externo** é
-  necessário para instalar, rodar ou usar o sistema no dia a dia.
-- É seguro copiar esta pasta inteira (por exemplo, via USB aprovado pela
-  sua área de segurança, ou qualquer outro meio de transferência já
-  homologado internamente) para uma máquina 100% air-gapped e rodar
-  diretamente, sem qualquer etapa de "instalação" prévia.
+```bash
+python3 --version   # precisa ser 3.11 ou superior
+```
 
-O único pré-requisito é o **próprio Python** estar disponível na máquina de
-destino — o mesmo runtime que qualquer outro sistema em Python exigiria, e
-que normalmente já é fornecido/homologado pela área de infraestrutura,
-independente deste projeto.
-
-## Por que essas escolhas técnicas
-
-- **SQLite (arquivo `.db` local)**: sem servidor, sem porta de rede, sem
-  processo em background. O arquivo pode ser copiado, versionado por backup
-  e auditado diretamente com qualquer leitor de SQLite.
-- **CSV puro (módulo `csv` da stdlib) em vez de leitura de `.xlsx`**: ler
-  planilhas binárias exige uma biblioteca de terceiros (`openpyxl`), que é
-  mais uma superfície de risco/dependência para auditar. Em vez disso, o
-  sistema lê CSV — se o seu sistema interno só exporta Excel, um "Salvar
-  como... > CSV" resolve em segundos, e a leitura em si passa a ser 100%
-  biblioteca padrão. Todas as colunas são lidas como texto e convertidas
-  explicitamente em `importer/validators.py` — nada de inferência
-  automática de tipo que possa corromper valores silenciosamente.
-- **Mensagens por template (arquivos `.txt` em `templates/mensagens/`),
-  nunca por LLM**: saída 100% previsível, revisável e aprovável por
-  Compliance sem depender de uma IA externa e sem risco de alucinação.
-  Trocar o texto de uma mensagem é editar um `.txt` — qualquer pessoa
-  consegue, sem saber programar.
-- **Configuração em `.ini` (módulo `configparser` da stdlib)** em vez de
-  YAML: elimina a dependência do `PyYAML` mantendo comentários e edição
-  manual fáceis.
-- **CLI em vez de interface web**: menor superfície de risco (nenhum
-  processo escutando rede, mesmo que "só localmente"), mais fácil de rodar
-  em ambiente air-gapped/regulado, e mais fácil de auditar (todo comando
-  fica no histórico do shell). Ver [Evoluindo para uma tela](#evoluindo-para-uma-tela-streamlit)
-  para quando fizer sentido migrar — e note que mesmo esse upgrade opcional
-  exigiria introduzir uma dependência externa (`streamlit`), o que só faz
-  sentido se as restrições de rede permitirem.
+Pronto — nada mais a instalar.
 
 ## Estrutura de pastas
 
 ```
 CRM/
 ├── README.md
-├── requirements.txt              # documenta a ausência de dependências (não há nada a instalar)
-├── settings.py                   # carregamento centralizado de config (.ini)
+├── requirements.txt              # documenta a ausência de dependências
+├── jarvis / jarvis.cmd            # wrappers para rodar `./jarvis <comando>`
+├── settings.py                    # carregamento centralizado de config (.ini)
 ├── config/
-│   ├── settings.ini              # caminhos: banco, inbox, backups
-│   ├── column_mapping.ini        # mapeamento de colunas do arquivo de origem -> campos internos
-│   └── rules_config.ini          # limiares das regras (meses, dias, evento de barreira)
+│   ├── settings.ini               # caminhos: banco, inbox, backups
+│   ├── column_mapping.ini         # mapeamento de colunas do arquivo de origem -> campos internos
+│   └── rules_config.ini           # limiares das regras + parâmetros do painel `hoje`
 ├── db/
-│   ├── schema.sql                 # schema SQLite completo
-│   └── database.py                # conexão + inicialização do banco
+│   ├── schema.sql                  # schema SQLite completo
+│   ├── database.py                 # conexão + inicialização do banco
+│   └── queries.py                  # consultas/escritas usadas pela CLI
 ├── importer/
-│   ├── file_reader.py             # leitura de .csv (erros estruturais de arquivo)
-│   ├── validators.py              # validação/parsing linha a linha (erros de dados)
-│   └── import_run.py              # orquestra upsert + fechamento de operações + log
+│   ├── file_reader.py              # leitura de .csv (erros estruturais de arquivo)
+│   ├── validators.py               # validação/parsing linha a linha (erros de dados)
+│   └── import_run.py               # upsert + fechamento de operações + relatório de diff
 ├── rules/
-│   ├── rules_definitions.py       # funções puras das 3 regras (100% testáveis)
-│   └── engine.py                  # aplica as regras sobre o banco, evita duplicidade
+│   ├── rules_definitions.py        # funções puras das regras (100% testáveis)
+│   └── engine.py                   # aplica as regras sobre o banco, evita duplicidade
 ├── templates/
-│   ├── mensagens/                 # 1 arquivo .txt por tipo_estrutura (editável por Compliance)
-│   │   ├── default.txt
-│   │   ├── capital_protegido.txt
-│   │   ├── autocall.txt
-│   │   └── dual_currency.txt
-│   └── message_generator.py       # renderiza template com os dados da operação
+│   ├── mensagens/                  # 1 arquivo .txt por tipo_estrutura (editável sem tocar em código)
+│   └── message_generator.py        # renderiza template com os dados da operação
 ├── cli/
-│   └── main.py                    # interface de linha de comando (importar, revisar, etc.)
-├── tests/                          # testes automatizados (unittest da stdlib)
+│   └── main.py                     # `jarvis importar/hoje/revisar/exportar/briefing/nota/...`
+├── tests/                           # testes automatizados (unittest da stdlib)
 ├── data/
-│   ├── inbox/                      # onde você coloca o arquivo exportado do sistema interno
-│   └── processed/                  # (opcional) arquivos já importados, para arquivo histórico
-└── backups/                        # cópias do .db com timestamp (ver `backup-db`)
+│   ├── inbox/                       # onde você coloca a extração manual do CRM oficial
+│   └── processed/                   # (opcional) extrações já importadas, para arquivo histórico
+└── backups/                         # cópias do .db com timestamp (ver `jarvis backup-db`)
 ```
 
-`crm_derivativos.db` é criado na raiz do projeto na primeira execução e
-**nunca é versionado** (está no `.gitignore`, junto com tudo em `data/inbox`
-e `data/processed`, pois pode conter dados de clientes).
-
-## Instalação
-
-Não há instalação. Copie a pasta do projeto para a máquina onde vai rodar
-(ela já tem tudo que precisa) e confirme que o Python está disponível:
-
-```bash
-python3 --version   # precisa ser 3.11 ou superior
-```
-
-Pronto — pode usar imediatamente, offline, a partir daqui.
+`crm_derivativos.db` é criado na raiz na primeira execução e **nunca é
+versionado** (está no `.gitignore`, junto com `data/inbox`/`data/processed`,
+pois podem conter dados de clientes).
 
 ## Uso diário
 
 ```bash
 # 1. Uma única vez: cria o banco e as tabelas
-python3 cli/main.py init-db
+./jarvis init-db
 
-# 2. Todo dia: importa o arquivo exportado manualmente do sistema interno
-python3 cli/main.py importar --arquivo data/inbox/export_2026-08-16.csv
+# 2. Todo dia: importa a extração manual do CRM oficial + roda o motor de regras
+./jarvis importar --arquivo data/inbox/extracao_2026-08-17.csv
+# imprime também um relatório do que mudou desde a extração anterior:
+# operações novas, que sumiram (provavelmente encerradas), mudanças de status de barreira
 
-# 3. Revisa os follow-ups pendentes gerados
-python3 cli/main.py listar-pendentes
+# 3. Painel do dia
+./jarvis hoje
 
-# 4. (opcional) exporta a lista para CSV, para revisar fora do terminal (abre no Excel)
-python3 cli/main.py exportar-pendentes --saida pendentes_2026-08-16.csv
+# 4. Revisa os rascunhos pendentes um a um (aprovar / editar / descartar)
+./jarvis revisar
 
-# 5. Depois de revisar (e, se for o caso, enviar manualmente) uma mensagem:
-python3 cli/main.py revisar --id 12 --usuario "rafael" --status revisado
-# ou, após o envio manual ter sido feito:
-python3 cli/main.py revisar --id 12 --usuario "rafael" --status enviado
+# 5. Exporta os rascunhos já aprovados, prontos para copiar/colar onde for enviar de fato
+./jarvis exportar --saida rascunhos_2026-08-17.csv
 
-# 6. Backup do banco (recomendado rodar sempre após a importação diária)
-python3 cli/main.py backup-db
+# 6. Resumo rápido de um cliente
+./jarvis briefing --cliente 1001
+
+# 7. Nota pessoal (só sua) sobre um cliente ou operação
+./jarvis nota --cliente 1001 --texto "Ligou perguntando sobre o autocall."
+./jarvis nota --cliente 1001 --operacao OPX1 --texto "Quer aumentar notional na renovação."
+
+# 8. Backup do banco (rode sempre depois da importação diária)
+./jarvis backup-db
 ```
 
-O comando `importar` já roda o motor de regras automaticamente logo após
-consolidar a importação — não é necessário nenhum passo manual adicional.
+(`./jarvis` é um wrapper de uma linha para `python3 cli/main.py`; se
+preferir, use `python3 cli/main.py <comando>` diretamente — funciona igual.)
+
+### `jarvis revisar`
+
+Passa pelos rascunhos pendentes um a um. Para cada um:
+
+- **[A]provar** — marca `status_revisao = revisado`, pronto para `exportar`.
+- **[E]ditar** — abre o texto no seu `$EDITOR` (ou `nano`/`vi`, o que
+  estiver disponível no PATH; se nenhum editor funcionar, cai para uma
+  captura simples via terminal). O texto editado fica em `mensagem_final`;
+  `mensagem_gerada` (o rascunho original do template) nunca é alterado,
+  preservado para auditoria. Depois de editar, o item volta a perguntar a
+  ação (pode editar de novo, aprovar ou descartar).
+- **[D]escartar** — marca `status_revisao = descartado`. Fica registrado,
+  mas não entra em `exportar`.
+- **[P]ular** — deixa `pendente`, decide depois.
+- **[Q]uit** — sai da revisão a qualquer momento; o que não foi decidido
+  continua `pendente`.
+
+### `jarvis exportar`
+
+Pega todos os rascunhos com `status_revisao = revisado`, escreve num
+`.csv` ou `.txt` (pela extensão do `--saida`) e marca cada um como
+`exportado` — para não duplicar na próxima exportação. **O arquivo gerado
+é só um rascunho pessoal para copiar/colar** — o envio em si e o registro
+oficial de contato continuam fora do Jarvis, no sistema da corretora.
 
 ## Formato do arquivo de entrada
 
-Apenas **CSV** é suportado (não `.xlsx`/`.xls` — ver justificativa acima).
-Se o seu sistema interno exporta em Excel, use "Salvar como... > CSV" antes
-de importar.
+Apenas **CSV** é suportado (não `.xlsx`, por decisão deliberada de manter
+zero dependências de terceiros — se seu CRM só exporta Excel, "Salvar
+como... > CSV" resolve em segundos).
 
-O parser **não está amarrado a nomes de coluna fixos**. Ele lê
-`config/column_mapping.ini`, onde cada campo interno (`cliente_id`, `nome`,
-`tipo_estrutura`, ...) é mapeado para o nome exato da coluna como ela
-aparece no seu arquivo. Se o seu sistema exporta `ID Cliente` em vez de
-`cliente_id`, basta editar esse `.ini` — nenhum código Python precisa mudar.
+O parser não está amarrado a nomes de coluna fixos: `config/column_mapping.ini`
+mapeia cada campo interno para o nome exato da coluna do seu arquivo — edite
+esse `.ini` se o cabeçalho real do seu CRM for diferente, sem tocar em código.
 
-Campos obrigatórios (a linha inteira é rejeitada se um deles faltar/for
-inválido): `cliente_id`, `nome`, `tipo_estrutura`, `ativo_objeto`,
-`data_fechamento`, `data_vencimento`.
-
-Campos opcionais: `operacao_id` (se ausente, um ID sintético estável é
-gerado a partir dos demais campos — ver `importer/validators.py`),
+Campos obrigatórios: `cliente_id`, `nome`, `tipo_estrutura`, `ativo_objeto`,
+`data_fechamento`, `data_vencimento`. Opcionais: `operacao_id` (se ausente,
+um ID sintético estável é gerado — ver `importer/validators.py`),
 `strike_1`, `strike_2`, `barreira`, `status_barreira`, `valor_notional`,
-`perfil_suitability`.
+`perfil_suitability`. `formato_data` e `separador_decimal` também ficam em
+`column_mapping.ini`.
 
-Também em `column_mapping.ini` (seção `[geral]`): `formato_data` (padrão
-`%d/%m/%Y`) e `separador_decimal` (`,` para `1.234,56`, `.` para
-`1,234.56`). O delimitador do CSV (vírgula, ponto-e-vírgula ou tabulação) é
-detectado automaticamente linha a linha.
+> Ainda não recebi o cabeçalho real do seu CRM oficial — quando tiver, é só
+> ajustar `config/column_mapping.ini` (e `formato_data`/`separador_decimal`
+> se necessário). Nenhum código muda.
 
-> Assim que você tiver um exemplo real de cabeçalho/linha do seu sistema
-> interno, é só ajustar `config/column_mapping.ini` (e `formato_data` /
-> `separador_decimal` se necessário) — não é preciso alterar código.
+### Tratamento de erros
 
-### Tratamento de erros na importação
-
-- **Erro estrutural** (arquivo não encontrado, formato não suportado, vazio,
-  sem cabeçalho, ou coluna obrigatória ausente): a importação inteira é
-  **abortada** com uma mensagem clara — nada é gravado no banco.
-- **Erro em uma linha** (campo obrigatório vazio, data inválida): **só
-  aquela linha** é descartada; o restante do arquivo é importado
-  normalmente. O motivo exato fica registrado em
-  `log_importacoes.detalhes_erros` (JSON) e é impresso no terminal.
-- **Erro em campo opcional** (ex.: `barreira` com valor não numérico): o
-  campo fica `NULL` e um aviso é registrado — a operação continua sendo
-  importada.
+- **Erro estrutural** (arquivo não encontrado, formato não suportado,
+  vazio, sem cabeçalho, coluna obrigatória ausente): a importação inteira é
+  abortada — nada é gravado.
+- **Erro em uma linha** (campo obrigatório vazio/inválido): só aquela linha
+  é descartada; o resto do arquivo é importado normalmente. Motivo exato
+  registrado em `log_importacoes.detalhes` (JSON) e impresso no terminal.
+- **Erro em campo opcional**: o campo fica `NULL`, um aviso é registrado, a
+  operação continua sendo importada.
 
 ## Modelo de dados (SQLite)
 
-Ver `db/schema.sql` para o schema completo e comentado. Resumo:
+Ver `db/schema.sql` para o schema completo e comentado.
 
-- **clientes**: `id`, `codigo` (identificador do sistema de origem),
-  `nome`, `perfil_suitability`.
+- **clientes**: `id`, `codigo` (id do cliente no CRM oficial), `nome`,
+  `perfil_suitability`.
 - **operacoes**: `id`, `operacao_ref`, `cliente_id` (FK), `tipo_estrutura`,
   `ativo_objeto`, `data_fechamento`, `data_vencimento`, `strike_1`,
   `strike_2`, `barreira`, `status_barreira`, `status_barreira_anterior`
-  (usado pela regra de evento), `valor_notional`, `parametros_json` (linha
-  bruta original, para auditoria completa), `status` (`ativa`/`encerrada`).
-- **follow_ups**: `id`, `operacao_id` (FK), `data_gerado`,
-  `regra_disparada`, `motivo_disparo`, `mensagem_gerada`, `status_revisao`
-  (`pendente`/`revisado`/`enviado`), `usuario_revisor`, `data_revisao`.
+  (uso interno da regra de evento), `valor_notional`, `parametros_json`
+  (linha bruta original, auditoria completa), `status` (`ativa`/`encerrada`),
+  **`fonte_extracao`, `data_extracao`** (deixam explícito que é um espelho).
+- **follow_ups**: `id`, `operacao_id` (FK), `data_gerado`, `regra_disparada`,
+  `motivo_disparo`, `mensagem_gerada` (original, imutável), `mensagem_final`
+  (editável em `revisar`), `status_revisao`
+  (`pendente`/`revisado`/`descartado`/`exportado`), `data_revisao`.
 - **log_importacoes**: `id`, `data`, `arquivo`, `linhas_processadas`,
-  `novas`, `atualizadas`, `encerradas`, `erros`, `detalhes_erros` (JSON).
+  `novas`, `atualizadas`, `encerradas`, `erros`, `detalhes` (JSON com
+  erros/avisos linha a linha + o relatório de diff da importação).
+- **notas_pessoais**: `id`, `cliente_id` (FK), `operacao_id` (FK, opcional),
+  `texto`, `data_criacao` — anotações livres, só suas.
 
-Upsert de operações usa a chave `(cliente_id, operacao_ref)`. Operações que
-estavam `ativa` e não aparecem mais no arquivo importado são marcadas como
-`encerrada` automaticamente.
+Upsert de operações usa a chave `(cliente_id, operacao_ref)`. Operações
+`ativa` que não aparecem mais na extração são marcadas `encerrada`
+automaticamente — e listadas no relatório de diff do `jarvis importar`.
 
 ## Motor de regras
 
-Configurável em `config/rules_config.ini`, sem precisar mexer em código:
+Configurável em `config/rules_config.ini`, sem mexer em código:
 
-1. **Tempo decorrido**: dispara (uma única vez por limiar) quando o número
-   de meses desde `data_fechamento` atinge cada valor de uma lista
-   (default: `1,3,6,12`).
+1. **Tempo decorrido**: dispara (uma única vez por limiar) quando os meses
+   desde `data_fechamento` atingem cada valor de `meses` (default: `1,3,6,12`).
 2. **Proximidade de vencimento**: dispara (uma única vez por limiar) quando
-   faltam N dias ou menos para `data_vencimento` (default: `30,15,5`), e a
+   faltam N dias ou menos para `data_vencimento` (default: `15`), e a
    operação ainda não venceu.
 3. **Evento de barreira**: dispara quando `status_barreira` muda de valor
-   entre duas importações consecutivas da mesma operação. Opcionalmente
-   restrito a uma lista de status relevantes (`status_relevantes`).
+   entre duas extrações consecutivas da mesma operação.
 
-**Regra de deduplicação**: cada `(operação, regra_disparada)` só gera um
-follow-up **uma única vez**, independentemente do `status_revisao` do
-registro gerado. Isso evita spam ao reimportar o arquivo diariamente
-enquanto a condição de tempo/vencimento continuar verdadeira. O evento de
-barreira, por natureza, só é reavaliado quando o status realmente muda de
-novo — a própria comparação com `status_barreira_anterior` já evita
-duplicidade sem precisar consultar o histórico de follow-ups.
+**Deduplicação**: cada `(operação, regra_disparada)` gera um rascunho **uma
+única vez**, independentemente do que você decidiu depois (`revisado`,
+`descartado` ou `exportado`) — evita spam ao reimportar diariamente
+enquanto a condição continuar verdadeira. As funções que avaliam cada regra
+(`rules/rules_definitions.py`) são puras, sem acesso a banco — 100%
+testáveis isoladamente.
 
-As funções que avaliam cada regra (`rules/rules_definitions.py`) são puras
-(sem acesso a banco), o que as torna 100% testáveis isoladamente — ver
-`tests/test_rules_definitions.py`.
+O painel `jarvis hoje` usa mais dois parâmetros de `rules_config.ini`, que
+**não geram rascunhos**, só destacam informação:
+
+- `[status_barreira_tocada]`: quais valores de `status_barreira` contam
+  como "tocada" no painel.
+- `[janela_sem_contato]`: sinaliza clientes sem sinal de atividade no
+  Jarvis há mais de N dias (default: 30). **Isto é um PROXY interno** —
+  dias desde a `data_fechamento` mais recente entre as operações ativas do
+  cliente. Não é, e não tenta ser, o registro oficial de contato — esse
+  vive no CRM da corretora, fora do escopo do Jarvis.
 
 ## Templates de mensagem
 
-`templates/mensagens/` tem um arquivo `.txt` por `tipo_estrutura` (nome do
-arquivo = slug do tipo, ex. `capital_protegido.txt`), mais um
-`default.txt` obrigatório, usado quando não há um template específico.
-Placeholders disponíveis: `{cliente}`/`{nome}`, `{codigo}`,
+`templates/mensagens/` tem um `.txt` por `tipo_estrutura` (nome do arquivo
+= slug do tipo, ex. `capital_protegido.txt`) mais um `default.txt`
+obrigatório. Placeholders: `{cliente}`/`{nome}`, `{codigo}`,
 `{tipo_estrutura}`, `{ativo_objeto}`, `{data_fechamento}`,
 `{data_vencimento}`, `{dias_restantes}`, `{strike_1}`, `{strike_2}`,
 `{barreira}`, `{status_barreira}`, `{valor_notional}`, `{motivo_disparo}`.
 
-Cada template é texto puro — pode ser revisado e aprovado por Compliance
-sem tocar em código Python nem entender YAML/JSON. Um placeholder digitado
-errado no template aparece na mensagem gerada como `[nome_errado?]` em vez
-de quebrar a geração, tornando o erro visível já na etapa de revisão
-manual.
+Texto puro, sem YAML/JSON — qualquer um edita sem saber programar. Um
+placeholder digitado errado aparece como `[nome_errado?]` na mensagem em
+vez de quebrar a geração, ficando visível já na revisão manual (`jarvis
+revisar`).
 
 ## Rodando os testes
 
@@ -253,53 +255,49 @@ manual.
 python3 -m unittest discover -s tests -v
 ```
 
-Cobre: parsing de datas/números, validação linha a linha, avaliação das 3
-regras isoladamente, geração de mensagens (incluindo determinismo e
-fallback de template), e um fluxo de integração completo (3 importações +
-fechamento de operação + deduplicação de regras) usando um banco SQLite
-temporário. Nenhum teste depende de rede nem de bibliotecas de terceiros.
+Cobre: parsing de datas/números, validação linha a linha, as 3 regras
+isoladamente, geração de mensagens, as consultas/escritas de `db/queries.py`
+(aprovar/descartar/exportar, painel `hoje`, briefing, notas pessoais), e um
+fluxo de integração completo de 3 importações (incluindo o relatório de
+diff) usando um banco SQLite temporário. Nenhum teste depende de rede.
 
 ## Backup do banco
 
 ```bash
-python3 cli/main.py backup-db
+./jarvis backup-db
 ```
 
 Copia `crm_derivativos.db` para `backups/crm_derivativos_<timestamp>.db`.
-Recomendado rodar isso logo após a importação diária. Como é um arquivo
-único, a restauração é trivial: pare o uso do sistema, copie o backup
-desejado de volta para o caminho configurado em `config/settings.ini`
-(`db_path`), e pronto — sem migração, sem servidor para reiniciar.
-
-Para retenção de longo prazo, copie periodicamente o conteúdo de
-`backups/` para o seu backup corporativo padrão (fora deste diretório) —
-este projeto não versiona nem transmite o `.db` para lugar nenhum.
-
-## Evoluindo para uma tela (Streamlit)
-
-A CLI cobre bem o fluxo de revisão para uma pessoa. Se a mesa crescer (mais
-de um Sales Trader revisando a mesma base, necessidade de filtrar/ordenar
-visualmente, ou marcar vários follow-ups de uma vez), vale considerar uma
-tela local como upgrade futuro — mas isso **exigiria introduzir uma
-dependência de terceiros** (ex. `streamlit`), o que só faz sentido se o seu
-ambiente permitir esse tipo de instalação. Dado que hoje o ambiente-alvo
-não pode acessar nenhum servidor externo, este projeto **deliberadamente
-não inclui** essa dependência — a base de código já está organizada para
-isso (`importer`, `rules`, `templates` são independentes de interface),
-então a migração fica pronta para o dia em que fizer sentido, sem reescrever
-nada da lógica de negócio.
+Recomendado rodar logo após a importação diária. Restauração: pare o uso,
+copie o backup desejado de volta para o caminho em `config/settings.ini`
+(`db_path`) — arquivo único, sem migração, sem servidor.
 
 ## Limitações conhecidas (documentadas por transparência)
 
-- Apenas `.csv` é suportado como entrada (não `.xlsx`/`.xls`), por decisão
-  deliberada de manter zero dependências de terceiros — ver seção acima.
-- Quando o arquivo de origem não traz um `operacao_id` próprio, o sistema
-  gera um ID sintético a partir de `cliente_id + tipo_estrutura +
-  ativo_objeto + data_fechamento + strikes + barreira`. Se qualquer um
-  desses campos mudar entre importações para a "mesma" operação real, o
-  sistema vai tratá-la como uma operação nova. Recomendação: peça ao time
-  responsável pelo sistema de origem para incluir um ID de operação estável
-  na exportação.
-- O motor de regras roda sobre operações com `status = 'ativa'` no momento
-  da importação; operações que já chegam `encerrada` no primeiro arquivo
-  importado nunca geram follow-up.
+- Apenas `.csv` como entrada, por decisão deliberada de manter zero
+  dependências de terceiros.
+- "Sem sinal de atividade há mais de N dias" no painel `hoje` é um **proxy**
+  (dias desde `data_fechamento`), não o contato oficial real — decisão
+  tomada explicitamente ao definir o escopo desta fase.
+- Sem `operacao_id` no arquivo de origem, o sistema gera um ID sintético a
+  partir de `cliente_id + tipo_estrutura + ativo_objeto + data_fechamento +
+  strikes + barreira`. Se algum desses campos mudar entre extrações para a
+  "mesma" operação real, o Jarvis vai tratá-la como uma operação nova.
+- O motor de regras roda sobre operações `ativa` no momento da importação;
+  operações que já chegam `encerrada` na primeira extração nunca geram
+  rascunho.
+
+## Próximas fases (não implementadas nesta entrega)
+
+Conforme escopo combinado, só entram depois da Fase 1 validada em uso real:
+
+- **Fase 2**: score de prioridade de contato (sempre sugestão, nunca
+  decisão automática) e painel de exposição consolidada por cliente/ativo.
+- **Fase 3** (opcional): métricas pessoais de produtividade, simulador de
+  cenário de barreira com inputs manuais (sem dado de mercado externo), e
+  relatório mensal de atividade exportável.
+
+Se/quando a mesa crescer e fizer sentido uma tela local (Streamlit) em vez
+da CLI, isso também fica para depois — e exigiria avaliar se o ambiente
+permite introduzir essa dependência de terceiros, já que hoje a prioridade
+é zero contato com qualquer servidor externo.

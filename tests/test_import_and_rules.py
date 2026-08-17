@@ -88,22 +88,35 @@ class TestImportacaoERegras(unittest.TestCase):
         return row["status"] if row else None
 
     def test_fluxo_completo(self):
-        # --- Importação 1: cria as duas operações. OP1 dispara tempo (1,3,6,12m) e vencimento (30,15,5d). ---
+        # --- Importação 1: cria as duas operações. OP1 dispara tempo (1,3,6,12m) e vencimento (15d). ---
         resultado1 = self._importar([linha_op1("tocada"), dict(LINHA_C2_BASE)], "imp1.csv")
         self.assertEqual(resultado1.novas, 2)
         self.assertEqual(resultado1.atualizadas, 0)
         self.assertEqual(resultado1.erros, [])
-        self.assertEqual(resultado1.follow_ups_gerados, 7)  # 4 tempo + 3 vencimento; sem evento (1ª aparição)
+        self.assertEqual(resultado1.follow_ups_gerados, 5)  # 4 tempo + 1 vencimento; sem evento (1ª aparição)
+        self.assertEqual(len(resultado1.diff_novas), 2)
+        self.assertEqual(resultado1.diff_encerradas, [])
+        self.assertEqual(resultado1.diff_mudancas_barreira, [])
 
         fus_op1 = self._follow_ups_operacao("OP1")
-        self.assertEqual(len(fus_op1), 7)
+        self.assertEqual(len(fus_op1), 5)
         regras = {row["regra_disparada"] for row in fus_op1}
         self.assertEqual(
             regras,
             {"tempo_decorrido_1m", "tempo_decorrido_3m", "tempo_decorrido_6m", "tempo_decorrido_12m",
-             "vencimento_30d", "vencimento_15d", "vencimento_5d"},
+             "vencimento_15d"},
         )
+        for row in fus_op1:
+            self.assertEqual(row["mensagem_final"], row["mensagem_gerada"])
         self.assertEqual(len(self._follow_ups_operacao("OP2")), 0)
+
+        conn = get_connection(self.db_path)
+        try:
+            op1 = conn.execute("SELECT * FROM operacoes WHERE operacao_ref = 'OP1'").fetchone()
+        finally:
+            conn.close()
+        self.assertEqual(op1["fonte_extracao"], "imp1.csv")
+        self.assertTrue(op1["data_extracao"])
 
         # --- Importação 2: só muda status_barreira de OP1. Regras de tempo/vencimento já
         # dispararam e não devem duplicar; só o evento de barreira deve gerar 1 novo follow-up. ---
@@ -111,9 +124,12 @@ class TestImportacaoERegras(unittest.TestCase):
         self.assertEqual(resultado2.novas, 0)
         self.assertEqual(resultado2.atualizadas, 2)
         self.assertEqual(resultado2.follow_ups_gerados, 1)
+        self.assertEqual(len(resultado2.diff_mudancas_barreira), 1)
+        self.assertEqual(resultado2.diff_mudancas_barreira[0]["status_anterior"], "tocada")
+        self.assertEqual(resultado2.diff_mudancas_barreira[0]["status_atual"], "rompida")
 
         fus_op1_depois = self._follow_ups_operacao("OP1")
-        self.assertEqual(len(fus_op1_depois), 8)
+        self.assertEqual(len(fus_op1_depois), 6)
         regra_evento = [r for r in fus_op1_depois if r["regra_disparada"].startswith("evento_barreira")]
         self.assertEqual(len(regra_evento), 1)
         self.assertEqual(regra_evento[0]["regra_disparada"], "evento_barreira_rompida")
@@ -121,9 +137,11 @@ class TestImportacaoERegras(unittest.TestCase):
         # --- Importação 3: OP1 sai do arquivo -> deve ser marcada como encerrada e parar de gerar follow-ups. ---
         resultado3 = self._importar([dict(LINHA_C2_BASE)], "imp3.csv")
         self.assertEqual(resultado3.encerradas, 1)
+        self.assertEqual(len(resultado3.diff_encerradas), 1)
+        self.assertEqual(resultado3.diff_encerradas[0]["operacao_ref"], "OP1")
         self.assertEqual(self._status_operacao("OP1"), "encerrada")
         self.assertEqual(resultado3.follow_ups_gerados, 0)
-        self.assertEqual(len(self._follow_ups_operacao("OP1")), 8)  # não ganhou novos follow-ups
+        self.assertEqual(len(self._follow_ups_operacao("OP1")), 6)  # não ganhou novos follow-ups
 
     def test_linha_invalida_nao_derruba_importacao_inteira(self):
         linha_invalida = dict(LINHA_C2_BASE, cliente_id="", operacao_id="OP_INVALIDA")

@@ -22,10 +22,14 @@ def _ja_disparada(conn, operacao_id: int, regra_disparada: str) -> bool:
 
 
 def _inserir_follow_up(conn, operacao_id: int, regra_disparada: str, motivo: str, mensagem: str):
+    """mensagem_final começa idêntica a mensagem_gerada; `jarvis revisar` pode
+    editar mensagem_final, mas mensagem_gerada nunca é alterada (preserva o
+    rascunho original gerado por template, para auditoria)."""
     conn.execute(
-        """INSERT INTO follow_ups (operacao_id, regra_disparada, motivo_disparo, mensagem_gerada, status_revisao)
-           VALUES (?, ?, ?, ?, 'pendente')""",
-        (operacao_id, regra_disparada, motivo, mensagem),
+        """INSERT INTO follow_ups
+               (operacao_id, regra_disparada, motivo_disparo, mensagem_gerada, mensagem_final, status_revisao)
+           VALUES (?, ?, ?, ?, ?, 'pendente')""",
+        (operacao_id, regra_disparada, motivo, mensagem, mensagem),
     )
 
 

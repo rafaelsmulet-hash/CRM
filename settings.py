@@ -67,4 +67,9 @@ def carregar_rules_config() -> dict:
             "ativa": cp.getboolean("regra_evento_barreira", "ativa", fallback=True),
             "status_relevantes": _lista_str(cp.get("regra_evento_barreira", "status_relevantes", fallback="")),
         },
+        "status_barreira_tocada": _lista_str(cp.get("status_barreira_tocada", "valores", fallback="tocada")),
+        "janela_sem_contato": {
+            "ativa": cp.getboolean("janela_sem_contato", "ativa", fallback=True),
+            "dias": cp.getint("janela_sem_contato", "dias", fallback=30),
+        },
     }

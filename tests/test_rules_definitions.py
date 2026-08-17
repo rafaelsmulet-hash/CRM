@@ -6,7 +6,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from rules.rules_definitions import (  # noqa: E402
-    avaliar_evento_barreira, avaliar_tempo_decorrido, avaliar_vencimento_proximo, meses_decorridos,
+    avaliar_evento_barreira, avaliar_tempo_decorrido, avaliar_vencimento_proximo,
+    dias_decorridos, meses_decorridos,
 )
 
 
@@ -22,6 +23,14 @@ class TestMesesDecorridos(unittest.TestCase):
 
     def test_nunca_negativo(self):
         self.assertEqual(meses_decorridos(date(2026, 5, 1), date(2026, 4, 1)), 0)
+
+
+class TestDiasDecorridos(unittest.TestCase):
+    def test_dias_exatos(self):
+        self.assertEqual(dias_decorridos(date(2026, 7, 1), date(2026, 8, 16)), 46)
+
+    def test_nunca_negativo(self):
+        self.assertEqual(dias_decorridos(date(2026, 9, 1), date(2026, 8, 16)), 0)
 
 
 class TestTempoDecorrido(unittest.TestCase):

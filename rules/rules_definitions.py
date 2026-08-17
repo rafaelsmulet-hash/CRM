@@ -11,6 +11,10 @@ def meses_decorridos(data_fechamento: date, hoje: date) -> int:
     return max(meses, 0)
 
 
+def dias_decorridos(data: date, hoje: date) -> int:
+    return max((hoje - data).days, 0)
+
+
 def avaliar_tempo_decorrido(data_fechamento: date, hoje: date, meses_config: list[int]) -> list[tuple[str, str]]:
     """Retorna lista de (regra_disparada, motivo) para cada limiar de meses
     já atingido desde o fechamento."""
@@ -19,7 +23,7 @@ def avaliar_tempo_decorrido(data_fechamento: date, hoje: date, meses_config: lis
     for m in sorted(set(meses_config)):
         if decorridos >= m:
             regra = f"tempo_decorrido_{m}m"
-            motivo = f"{m} mes(es) sem contato desde o fechamento (decorridos: {decorridos} mes(es))"
+            motivo = f"{m} mes(es) desde o fechamento (decorridos: {decorridos} mes(es))"
             disparos.append((regra, motivo))
     return disparos
 
