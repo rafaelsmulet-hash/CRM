@@ -76,7 +76,8 @@ CRM/
 │   ├── mensagens/                  # 1 arquivo .txt por tipo_estrutura (editável sem tocar em código)
 │   └── message_generator.py        # renderiza template com os dados da operação
 ├── cli/
-│   └── main.py                     # `jarvis importar/hoje/revisar/exportar/briefing/nota/...`
+│   ├── main.py                      # `jarvis importar/hoje/revisar/exportar/briefing/nota/...`
+│   └── html_export.py               # painel visual estático (`jarvis hoje --html`)
 ├── tests/                           # testes automatizados (unittest da stdlib)
 ├── data/
 │   ├── inbox/                       # onde você coloca a extração manual do CRM oficial
@@ -99,8 +100,13 @@ pois podem conter dados de clientes).
 # imprime também um relatório do que mudou desde a extração anterior:
 # operações novas, que sumiram (provavelmente encerradas), mudanças de status de barreira
 
-# 3. Painel do dia
+# 3. Painel do dia (texto no terminal)
 ./jarvis hoje
+
+# 3b. Ou um painel visual em HTML, para abrir no navegador (sem servidor, sem rede)
+./jarvis hoje --html painel.html
+# ou os mesmos dados em JSON, para quem quiser automatizar depois
+./jarvis hoje --json painel.json
 
 # 4. Revisa os rascunhos pendentes um a um (aprovar / editar / descartar)
 ./jarvis revisar

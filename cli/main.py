@@ -12,6 +12,8 @@ Uso (a partir da raiz do projeto, ou via o script `./jarvis` na raiz):
     python3 cli/main.py init-db
     python3 cli/main.py importar --arquivo data/inbox/export_2026-08-16.csv
     python3 cli/main.py hoje
+    python3 cli/main.py hoje --html painel.html   # painel visual, abre no navegador
+    python3 cli/main.py hoje --json painel.json    # mesmos dados em JSON
     python3 cli/main.py revisar
     python3 cli/main.py exportar --saida rascunhos_2026-08-16.csv
     python3 cli/main.py briefing --cliente 1001
@@ -20,6 +22,7 @@ Uso (a partir da raiz do projeto, ou via o script `./jarvis` na raiz):
 """
 import argparse
 import csv
+import json
 import os
 import shutil
 import subprocess
@@ -92,51 +95,96 @@ def cmd_importar(args, cfg):
 
 # ------------------------------------------------------------------ hoje
 
+def _montar_dados_hoje(conn, rules_config: dict, hoje: date) -> dict:
+    """Monta o painel do dia como estrutura de dados simples (dict/list),
+    reutilizável pelas três saídas (texto, HTML, JSON)."""
+    pendentes = queries.contar_pendentes(conn)
+
+    cfg_venc = rules_config.get("regra_vencimento_proximo", {})
+    janela_venc = max(cfg_venc.get("dias_antes", [15]) or [15])
+    vencimentos_raw = queries.listar_vencimentos_proximos(conn, janela_venc, hoje) if cfg_venc.get("ativa", True) else []
+    vencimentos = [
+        {"cliente_nome": op["cliente_nome"], "cliente_codigo": op["cliente_codigo"],
+         "tipo_estrutura": op["tipo_estrutura"], "ativo_objeto": op["ativo_objeto"],
+         "data_vencimento": op["data_vencimento"], "dias_restantes": dias}
+        for op, dias in vencimentos_raw
+    ]
+
+    valores_tocada = rules_config.get("status_barreira_tocada", [])
+    barreiras = [
+        {"cliente_nome": op["cliente_nome"], "cliente_codigo": op["cliente_codigo"],
+         "tipo_estrutura": op["tipo_estrutura"], "ativo_objeto": op["ativo_objeto"],
+         "status_barreira": op["status_barreira"]}
+        for op in queries.listar_barreiras_tocadas(conn, valores_tocada)
+    ]
+
+    cfg_contato = rules_config.get("janela_sem_contato", {})
+    janela_contato = cfg_contato.get("dias", 30)
+    sem_contato = []
+    if cfg_contato.get("ativa", True):
+        sem_contato = queries.listar_clientes_sem_contato(conn, janela_contato, hoje)
+
+    return {
+        "data": hoje.isoformat(),
+        "pendentes": pendentes,
+        "janela_vencimento_dias": janela_venc,
+        "vencimentos_proximos": vencimentos,
+        "valores_barreira_tocada": valores_tocada,
+        "barreiras_tocadas": barreiras,
+        "janela_sem_contato_dias": janela_contato,
+        "janela_sem_contato_ativa": cfg_contato.get("ativa", True),
+        "clientes_sem_contato": sem_contato,
+    }
+
+
+def _imprimir_painel_texto(dados: dict):
+    print(f"=== Painel do dia — {dados['data']} ===\n")
+
+    print(f"Rascunhos de follow-up pendentes de revisão: {dados['pendentes']}")
+    print("(rode `jarvis revisar` para passar por eles um a um)\n")
+
+    print(f"Vencimentos nos próximos {dados['janela_vencimento_dias']} dia(s): {len(dados['vencimentos_proximos'])}")
+    for v in dados["vencimentos_proximos"]:
+        print(f"  {v['cliente_nome']} ({v['cliente_codigo']}) — {v['tipo_estrutura']} / {v['ativo_objeto']} "
+              f"— vence em {v['dias_restantes']} dia(s) ({v['data_vencimento']})")
+    print()
+
+    valores_tocada = dados["valores_barreira_tocada"]
+    print(f"Barreiras tocadas ({'/'.join(valores_tocada) or 'nenhum status configurado'}): {len(dados['barreiras_tocadas'])}")
+    for b in dados["barreiras_tocadas"]:
+        print(f"  {b['cliente_nome']} ({b['cliente_codigo']}) — {b['tipo_estrutura']} / {b['ativo_objeto']} "
+              f"— status_barreira: {b['status_barreira']}")
+    print()
+
+    if dados["janela_sem_contato_ativa"]:
+        print(f"Clientes sem sinal de atividade há mais de {dados['janela_sem_contato_dias']} dia(s) "
+              f"(PROXY interno: dias desde a data_fechamento mais recente entre operações ativas — "
+              f"NÃO é o registro oficial de contato do CRM): {len(dados['clientes_sem_contato'])}")
+        for c in dados["clientes_sem_contato"]:
+            print(f"  {c['cliente_nome']} ({c['cliente_codigo']}) — {c['dias_desde_ultimo_fechamento']} dia(s)")
+
+
 def cmd_hoje(args, cfg):
     rules_config = carregar_rules_config()
     hoje = date.today()
     conn = get_connection(cfg["_db_path_absoluto"])
     try:
-        pendentes = queries.contar_pendentes(conn)
-
-        cfg_venc = rules_config.get("regra_vencimento_proximo", {})
-        janela_venc = max(cfg_venc.get("dias_antes", [15]) or [15])
-        vencimentos = queries.listar_vencimentos_proximos(conn, janela_venc, hoje) if cfg_venc.get("ativa", True) else []
-
-        valores_tocada = rules_config.get("status_barreira_tocada", [])
-        barreiras = queries.listar_barreiras_tocadas(conn, valores_tocada)
-
-        cfg_contato = rules_config.get("janela_sem_contato", {})
-        sem_contato = []
-        if cfg_contato.get("ativa", True):
-            sem_contato = queries.listar_clientes_sem_contato(conn, cfg_contato.get("dias", 30), hoje)
+        dados = _montar_dados_hoje(conn, rules_config, hoje)
     finally:
         conn.close()
 
-    print(f"=== Painel do dia — {hoje.isoformat()} ===\n")
+    if not args.html and not args.json:
+        _imprimir_painel_texto(dados)
+        return
 
-    print(f"Rascunhos de follow-up pendentes de revisão: {pendentes}")
-    print("(rode `jarvis revisar` para passar por eles um a um)\n")
+    if args.html:
+        from cli.html_export import gerar_html_painel
+        Path(args.html).write_text(gerar_html_painel(dados), encoding="utf-8")
+        print(f"Painel HTML gerado em: {args.html} (abra com duplo-clique no navegador)")
 
-    print(f"Vencimentos nos próximos {janela_venc} dia(s): {len(vencimentos)}")
-    for op, dias in vencimentos:
-        print(f"  {op['cliente_nome']} ({op['cliente_codigo']}) — {op['tipo_estrutura']} / {op['ativo_objeto']} "
-              f"— vence em {dias} dia(s) ({op['data_vencimento']})")
-    print()
-
-    print(f"Barreiras tocadas ({'/'.join(valores_tocada) or 'nenhum status configurado'}): {len(barreiras)}")
-    for op in barreiras:
-        print(f"  {op['cliente_nome']} ({op['cliente_codigo']}) — {op['tipo_estrutura']} / {op['ativo_objeto']} "
-              f"— status_barreira: {op['status_barreira']}")
-    print()
-
-    if cfg_contato.get("ativa", True):
-        dias_limite = cfg_contato.get("dias", 30)
-        print(f"Clientes sem sinal de atividade há mais de {dias_limite} dia(s) "
-              f"(PROXY interno: dias desde a data_fechamento mais recente entre operações ativas — "
-              f"NÃO é o registro oficial de contato do CRM): {len(sem_contato)}")
-        for c in sem_contato:
-            print(f"  {c['cliente_nome']} ({c['cliente_codigo']}) — {c['dias_desde_ultimo_fechamento']} dia(s)")
+    if args.json:
+        Path(args.json).write_text(json.dumps(dados, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"Painel JSON gerado em: {args.json}")
 
 
 # ------------------------------------------------------------------ revisar
@@ -369,7 +417,9 @@ def montar_parser():
     p_importar = sub.add_parser("importar", help="Importa uma extração manual do CRM e roda o motor de regras.")
     p_importar.add_argument("--arquivo", required=True, help="Caminho do arquivo .csv exportado do CRM oficial.")
 
-    sub.add_parser("hoje", help="Painel do dia: pendentes, vencimentos próximos, barreiras tocadas, clientes sem contato.")
+    p_hoje = sub.add_parser("hoje", help="Painel do dia: pendentes, vencimentos próximos, barreiras tocadas, clientes sem contato.")
+    p_hoje.add_argument("--html", default=None, help="Também gera um painel visual em HTML neste caminho (abre no navegador).")
+    p_hoje.add_argument("--json", default=None, help="Também gera os mesmos dados em JSON neste caminho.")
 
     sub.add_parser("revisar", help="Revisa os rascunhos pendentes um a um (aprovar/editar/descartar).")
 
