@@ -1,0 +1,19 @@
+Panorama da sua estrutura autocall — {competencia}
+
+Prezado(a) {cliente},
+
+Sua operação {operacao_ref} (autocall, referenciada a {ativo_principal}) segue o seguinte panorama:
+
+- Status da barreira: {status_barreira}
+- Distância até a barreira: {distancia_barreira_pct}
+- Vencimento (se não houver autocall antes): {data_vencimento} ({dias_restantes} dia(s) restantes)
+
+Eventos no período:
+{eventos_recentes}
+
+Próximas datas de observação (fixing):
+{proximos_fixings}
+
+Qualquer dúvida, estamos à disposição.
+
+[RASCUNHO — revisar antes de enviar. Este texto não foi aprovado nem enviado ao cliente.]

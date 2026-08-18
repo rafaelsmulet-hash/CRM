@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titulo %}Clientes{% endblock %}
+{% block conteudo %}
+<h1>Clientes</h1>
+<p class="subtitulo">A maioria chega via importação do Orbit. Cadastro manual é para exceções.</p>
+<div class="acoes" style="margin-bottom:1rem"><a class="btn" href="/clientes/novo">+ Cadastrar exceção</a></div>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Nome</th><th>Suitability</th><th>Origem</th><th>Estruturas</th></tr></thead>
+  <tbody>
+    {% for c in clientes %}
+    <tr>
+      <td>{{ c.nome }}</td>
+      <td>{{ c.suitability or "—" }}</td>
+      <td>{% if c.codigo_orbit %}<span class="badge-fonte">Orbit · {{ c.codigo_orbit }}</span>{% else %}<span class="badge-fonte">manual</span>{% endif %}</td>
+      <td><a href="/estruturas?cliente_id={{ c.id }}">{{ c.estruturas|length }}</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">Nenhum cliente ainda. Importe do Orbit ou cadastre uma exceção.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

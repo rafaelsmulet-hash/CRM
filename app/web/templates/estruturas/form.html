@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titulo %}Nova estrutura{% endblock %}
+{% block conteudo %}
+<h1>Cadastrar estrutura (exceção)</h1>
+<p class="subtitulo">Use isto só para operações fora do Orbit. O fluxo principal é a importação.</p>
+<form class="form-vertical" method="post" action="/estruturas/novo">
+  <label>Cliente
+    <select name="cliente_id" required>
+      {% for c in clientes %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Identificação da operação<input type="text" name="operacao_ref" required></label>
+  <label>Tipo de estrutura<input type="text" name="tipo_estrutura" placeholder="ex.: capital_protegido, autocall" required></label>
+  <label>Ativo principal<input type="text" name="ativo_principal" placeholder="ex.: PETR4" required></label>
+  <label>Notional<input type="number" step="0.01" name="notional"></label>
+  <label>Data início<input type="date" name="data_inicio" required></label>
+  <label>Data vencimento<input type="date" name="data_vencimento" required></label>
+  <label>Nível da barreira (opcional)<input type="number" step="0.0001" name="barreira_nivel"></label>
+  <label>Direção da barreira
+    <select name="barreira_direcao">
+      <option value="queda">Queda (atinge se o preço cair)</option>
+      <option value="alta">Alta (atinge se o preço subir)</option>
+    </select>
+  </label>
+  <div class="acoes">
+    <button type="submit">Cadastrar</button>
+    <a class="btn secundario" href="/estruturas">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

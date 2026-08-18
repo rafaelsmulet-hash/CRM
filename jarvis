@@ -1,6 +1,0 @@
-#!/bin/sh
-# Wrapper para rodar o Jarvis como `./jarvis <comando>` em vez de
-# `python3 cli/main.py <comando>`. Não instala nada, não precisa de rede —
-# só localiza o Python 3 e chama o script direto.
-DIR="$(cd "$(dirname "$0")" && pwd)"
-exec python3 "$DIR/cli/main.py" "$@"

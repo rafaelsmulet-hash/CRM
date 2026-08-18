@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block titulo %}Importação Orbit{% endblock %}
+{% block conteudo %}
+<h1>Importação Orbit</h1>
+<p class="subtitulo">Suba o arquivo exportado do Orbit (.xlsx ou .csv) do dia. O motor roda automaticamente logo em seguida.</p>
+
+{% if erro_estrutural %}
+<div class="msg-erro">
+  <strong>Importação abortada — nada foi gravado.</strong><br>
+  {{ erro_estrutural }}
+</div>
+{% endif %}
+
+{% if resultado %}
+<div class="msg-ok">
+  <strong>Importado com sucesso.</strong>
+  {{ resultado.linhas_processadas }} linha(s) processada(s) —
+  {{ resultado.novas }} nova(s), {{ resultado.atualizadas }} atualizada(s), {{ resultado.encerradas }} encerrada(s),
+  {{ resultado.erros|length }} erro(s) de linha.
+</div>
+{% if resultado.erros %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Linha</th><th>Motivo</th></tr></thead>
+  <tbody>
+    {% for e in resultado.erros %}<tr><td>{{ e.linha }}</td><td>{{ e.motivo }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endif %}
+
+<div class="card" style="max-width:480px">
+  <form method="post" action="/orbit/importar" enctype="multipart/form-data" class="form-vertical">
+    <label>Arquivo do Orbit<input type="file" name="arquivo" accept=".xlsx,.csv" required></label>
+    <button type="submit">Importar</button>
+  </form>
+</div>
+
+<h2>Histórico de importações</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Data</th><th>Arquivo</th><th>Linhas</th><th>Novas</th><th>Atualizadas</th><th>Encerradas</th><th>Erros</th></tr></thead>
+  <tbody>
+    {% for i in historico %}
+    <tr>
+      <td>{{ i.data.strftime('%d/%m/%Y %H:%M') }}</td>
+      <td>{{ i.arquivo }}</td>
+      <td>{{ i.linhas_processadas }}</td>
+      <td>{{ i.novas }}</td>
+      <td>{{ i.atualizadas }}</td>
+      <td>{{ i.encerradas }}</td>
+      <td>{% if i.erros %}<span class="chip warn">{{ i.erros|length }}</span>{% else %}—{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="7" class="muted">Nenhuma importação ainda.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

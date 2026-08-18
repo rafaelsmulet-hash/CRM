@@ -1,0 +1,21 @@
+Panorama da sua estrutura — {competencia}
+
+Prezado(a) {cliente},
+
+Segue o panorama da operação {operacao_ref} ({tipo_estrutura}, referenciada a {ativo_principal}).
+
+Situação atual:
+- Status da barreira: {status_barreira}
+- Distância até a barreira: {distancia_barreira_pct}
+- Nível da barreira: {barreira_nivel}
+- Vencimento: {data_vencimento} ({dias_restantes} dia(s) restantes)
+
+Eventos no período:
+{eventos_recentes}
+
+Próximos fixings:
+{proximos_fixings}
+
+Qualquer dúvida, estamos à disposição.
+
+[RASCUNHO — revisar antes de enviar. Este texto não foi aprovado nem enviado ao cliente.]

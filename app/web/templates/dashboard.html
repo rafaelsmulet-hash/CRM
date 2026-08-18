@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titulo %}Dashboard{% endblock %}
+{% block conteudo %}
+<h1>Dashboard</h1>
+<p class="subtitulo">O sistema monitora tudo. Você só precisa olhar o que está abaixo.</p>
+
+<div class="grid cols-4">
+  <div class="card metric"><span class="n">{{ total_ativas }}</span><span class="l">Estruturas ativas</span></div>
+  <div class="card metric {{ 'destaque' if barreiras_proximas > 0 }}"><span class="n">{{ barreiras_proximas }}</span><span class="l">Próximas de barreira</span></div>
+  <div class="card metric {{ 'destaque' if barreiras_atingidas > 0 }}"><span class="n">{{ barreiras_atingidas }}</span><span class="l">Barreiras atingidas</span></div>
+  <div class="card metric"><span class="n">{{ fixings_proximos }}</span><span class="l">Fixings em {{ 7 }} dias</span></div>
+  <div class="card metric"><span class="n">{{ vencimentos_proximos }}</span><span class="l">Vencimentos em 30 dias</span></div>
+  <div class="card metric {{ 'destaque' if panoramas_pendentes > 0 }}"><span class="n">{{ panoramas_pendentes }}</span><span class="l">Panoramas p/ aprovar</span></div>
+</div>
+
+{% if alertas_abertos %}
+<div class="attn-section">
+  <h2>🚨 Atenção hoje</h2>
+  <div class="table-wrap" style="border:none">
+  <table>
+    <tbody>
+      {% for a in alertas_abertos %}
+      <tr>
+        <td style="width:110px">
+          {% if a.severidade.value == 'critico' %}<span class="chip danger">🔴 crítico</span>
+          {% elif a.severidade.value == 'atencao' %}<span class="chip warn">🟡 atenção</span>
+          {% else %}<span class="chip neutral">ℹ️ info</span>{% endif %}
+        </td>
+        <td>{{ a.mensagem }}</td>
+        <td style="width:90px; text-align:right">
+          {% if a.estrutura_id %}<a class="btn secundario" href="/estruturas/{{ a.estrutura_id }}">ver</a>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% else %}
+<div class="attn-section vazio">
+  <h2>🚨 Atenção hoje</h2>
+  <p style="margin:0">Nenhum alerta em aberto. Nada exige sua atenção agora.</p>
+</div>
+{% endif %}
+{% endblock %}

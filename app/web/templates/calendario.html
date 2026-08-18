@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titulo %}Calendário{% endblock %}
+{% block conteudo %}
+<h1>Calendário de eventos</h1>
+<p class="subtitulo">Fixings e vencimentos nos próximos {{ janela_dias }} dias.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Data</th><th>Tipo</th><th>Cliente</th><th>Operação</th><th>Detalhe</th></tr></thead>
+  <tbody>
+    {% for ev in eventos %}
+    <tr>
+      <td>{{ ev.data }}</td>
+      <td>{% if ev.tipo == 'Fixing' %}<span class="chip neutral">Fixing</span>{% else %}<span class="chip warn">Vencimento</span>{% endif %}</td>
+      <td>{{ ev.obj.estrutura.cliente.nome if ev.tipo == 'Fixing' else ev.obj.cliente.nome }}</td>
+      <td><a href="/estruturas/{{ ev.obj.estrutura.id if ev.tipo == 'Fixing' else ev.obj.id }}">
+        {{ ev.obj.estrutura.operacao_ref if ev.tipo == 'Fixing' else ev.obj.operacao_ref }}
+      </a></td>
+      <td>{{ ev.obj.tipo if ev.tipo == 'Fixing' else ev.obj.tipo_estrutura }}</td>
+    </tr>
+    {% else %}<tr><td colspan="5" class="muted">Nenhum evento nos próximos {{ janela_dias }} dias.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

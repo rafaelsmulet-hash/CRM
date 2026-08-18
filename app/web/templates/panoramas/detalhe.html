@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block titulo %}Panorama · {{ p.estrutura.operacao_ref }}{% endblock %}
+{% block conteudo %}
+<h1>{{ p.cliente.nome }} · {{ p.estrutura.operacao_ref }} · {{ p.competencia }}</h1>
+<p class="subtitulo">
+  {% if p.status_aprovacao.value == 'rascunho' %}<span class="chip warn">pendente de revisão</span>
+  {% elif p.status_aprovacao.value == 'aprovado' %}<span class="chip ok">aprovado em {{ p.aprovado_em.strftime('%d/%m/%Y') }}</span>
+  {% else %}<span class="chip neutral">rejeitado</span>{% endif %}
+</p>
+
+{% if p.status_aprovacao.value == 'rascunho' %}
+<form method="post" action="/panoramas/{{ p.id }}/aprovar" class="form-vertical">
+  <label>Texto (edite livremente antes de aprovar)
+    <textarea name="conteudo_final" rows="18">{{ p.conteudo_final or p.conteudo_gerado }}</textarea>
+  </label>
+  <div class="acoes">
+    <button type="submit">Aprovar</button>
+    <button type="submit" formaction="/panoramas/{{ p.id }}/rejeitar" class="perigo">Rejeitar</button>
+    <a class="btn secundario" href="/panoramas">Voltar</a>
+  </div>
+</form>
+{% else %}
+<div class="card"><pre style="white-space:pre-wrap; font-family:var(--mono); margin:0">{{ p.conteudo_final or p.conteudo_gerado }}</pre></div>
+<p class="muted" style="margin-top:1rem">O envio ao cliente continua fora do Jarvis, pelo canal oficial da corretora.</p>
+{% endif %}
+{% endblock %}

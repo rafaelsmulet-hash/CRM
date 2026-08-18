@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titulo %}{{ estrutura.operacao_ref }}{% endblock %}
+{% block conteudo %}
+<h1>{{ estrutura.cliente.nome }} · {{ estrutura.operacao_ref }}</h1>
+<p class="subtitulo">
+  {{ estrutura.tipo_estrutura }} · {{ estrutura.ativo_principal }} ·
+  {% if estrutura.status.value == 'ativa' %}<span class="chip ok">ativa</span>{% else %}<span class="chip neutral">{{ estrutura.status.value }}</span>{% endif %}
+  <span class="badge-fonte">· fonte: {{ estrutura.fonte_importacao }}{% if estrutura.data_importacao %} em {{ estrutura.data_importacao.strftime('%d/%m/%Y') }}{% endif %}</span>
+</p>
+
+<div class="grid cols-2">
+  <div class="card">
+    <h2 style="margin-top:0">Parâmetros</h2>
+    <table>
+      <tbody>
+        <tr><td class="muted">Notional</td><td>{{ estrutura.notional or "—" }} {{ estrutura.moeda }}</td></tr>
+        <tr><td class="muted">Valor de entrada</td><td>{{ estrutura.valor_entrada or "—" }}</td></tr>
+        <tr><td class="muted">Data início</td><td>{{ estrutura.data_inicio or "—" }}</td></tr>
+        <tr><td class="muted">Vencimento</td><td>{{ estrutura.data_vencimento or "—" }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Barreiras</h2>
+    {% for b in estrutura.barreiras %}
+      <p>
+        <strong>{{ b.tipo }}</strong> ({{ b.direcao }}) — nível {{ b.nivel }}
+        {% if b.status_atual.value == 'atingida' %}<span class="chip danger">🔴 ATINGIDA</span>
+        {% elif b.status_atual.value == 'proxima' %}<span class="chip warn">🟡 PRÓXIMA</span>
+        {% else %}<span class="chip neutral">⚪ NORMAL</span>{% endif %}
+        {% if distancias[b.id] is not none %}<span class="muted"> · distância {{ "%.2f"|format(distancias[b.id]) }}%</span>{% endif %}
+      </p>
+    {% else %}<p class="muted">Sem barreira cadastrada.</p>{% endfor %}
+
+    <h2>Fixings</h2>
+    {% for f in estrutura.fixings %}
+      <p>{{ f.data_fixing }} — {{ f.tipo }} — <span class="chip neutral">{{ f.status.value }}</span></p>
+    {% else %}<p class="muted">Sem fixing cadastrado.</p>{% endfor %}
+  </div>
+</div>
+
+<h2>Linha do tempo</h2>
+<ul class="timeline">
+  {% for ev in estrutura.eventos %}
+  <li>
+    <div class="quando">{{ ev.data_hora.strftime('%d/%m/%Y %H:%M') }} · {{ ev.fonte }}</div>
+    <div class="desc"><strong>{{ ev.tipo_evento }}</strong>
+      {% if ev.status_anterior and ev.status_novo %} — {{ ev.status_anterior }} → {{ ev.status_novo }}{% endif %}
+      {% if ev.preco_referencia %} · preço ref. {{ ev.preco_referencia }}{% endif %}
+    </div>
+    <div class="muted">{{ ev.regra_utilizada }}</div>
+  </li>
+  {% else %}<li class="muted">Nenhum evento registrado ainda — o motor gera eventos a cada importação.</li>{% endfor %}
+</ul>
+{% endblock %}

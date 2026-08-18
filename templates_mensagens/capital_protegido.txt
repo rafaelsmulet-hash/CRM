@@ -1,0 +1,20 @@
+Panorama da sua estrutura de capital protegido — {competencia}
+
+Prezado(a) {cliente},
+
+Sua operação {operacao_ref}, com capital protegido referenciada a {ativo_principal}, segue o seguinte panorama:
+
+- Status da barreira: {status_barreira}
+- Distância até a barreira: {distancia_barreira_pct}
+- Vencimento: {data_vencimento} ({dias_restantes} dia(s) restantes)
+
+Eventos no período:
+{eventos_recentes}
+
+Próximos fixings:
+{proximos_fixings}
+
+Lembramos que o capital investido está protegido nas condições contratadas.
+Qualquer dúvida, estamos à disposição.
+
+[RASCUNHO — revisar antes de enviar. Este texto não foi aprovado nem enviado ao cliente.]

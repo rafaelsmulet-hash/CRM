@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Estruturas{% endblock %}
+{% block conteudo %}
+<h1>Estruturas</h1>
+<div class="acoes" style="margin-bottom:1rem"><a class="btn" href="/estruturas/novo">+ Cadastrar exceção</a></div>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Cliente</th><th>Operação</th><th>Tipo</th><th>Ativo</th><th>Vencimento</th><th>Barreiras</th><th>Status</th></tr></thead>
+  <tbody>
+    {% for e in estruturas %}
+    <tr>
+      <td><a href="/estruturas/{{ e.id }}">{{ e.cliente.nome }}</a></td>
+      <td>{{ e.operacao_ref }}</td>
+      <td>{{ e.tipo_estrutura }}</td>
+      <td>{{ e.ativo_principal }}</td>
+      <td>{{ e.data_vencimento }}</td>
+      <td>
+        {% for b in e.barreiras %}
+          {% if b.status_atual.value == 'atingida' %}<span class="chip danger">🔴 atingida</span>
+          {% elif b.status_atual.value == 'proxima' %}<span class="chip warn">🟡 próxima</span>
+          {% else %}<span class="chip neutral">⚪ normal</span>{% endif %}
+        {% else %}<span class="muted">sem barreira</span>{% endfor %}
+      </td>
+      <td>{% if e.status.value == 'ativa' %}<span class="chip ok">ativa</span>{% else %}<span class="chip neutral">{{ e.status.value }}</span>{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="muted">Nenhuma estrutura ainda. Importe do Orbit para começar.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

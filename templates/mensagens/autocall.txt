@@ -1,8 +1,0 @@
-Prezado(a) {nome},
-
-Passando para falar sobre sua operação Autocall em {ativo_objeto} — barreira em {barreira},
-status atual: {status_barreira} — com vencimento em {data_vencimento} ({dias_restantes} dia(s) restante(s)).
-
-Motivo do contato: {motivo_disparo}
-
-Fico à disposição para conversarmos sobre os próximos passos.

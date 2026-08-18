@@ -1,17 +1,9 @@
-# Banco de dados local (contém dados de clientes - nunca versionar)
-*.db
-*.db-journal
-*.sqlite
-*.sqlite3
+# Configuração local — nunca versionar (pode conter segredos)
+.env
 
-# Backups do banco
-backups/*.db
-
-# Arquivos de importação (podem conter dados de clientes)
-data/inbox/*
-!data/inbox/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
+# Arquivos importados do Orbit e panoramas — podem conter dado de cliente
+data/
+!data/.gitkeep
 
 # Python
 __pycache__/
@@ -19,7 +11,8 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+.pytest_cache/
 
-# Exportações de revisão (podem conter dados de clientes)
-pendentes*.csv
-*.xlsx
+# Banco local (se algum dia rodar SQLite em dev/teste)
+*.db
+*.sqlite3

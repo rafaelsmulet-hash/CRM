@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Alertas{% endblock %}
+{% block conteudo %}
+<h1>Central de alertas</h1>
+<p class="subtitulo">
+  <a href="/alertas?mostrar=abertos" class="{{ 'btn' if mostrar == 'abertos' else 'btn secundario' }}">Abertos</a>
+  <a href="/alertas?mostrar=todos" class="{{ 'btn' if mostrar == 'todos' else 'btn secundario' }}">Todos</a>
+</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Quando</th><th>Severidade</th><th>Mensagem</th><th></th></tr></thead>
+  <tbody>
+    {% for a in alertas %}
+    <tr>
+      <td class="muted">{{ a.criado_em.strftime('%d/%m %H:%M') }}</td>
+      <td>
+        {% if a.severidade.value == 'critico' %}<span class="chip danger">🔴 crítico</span>
+        {% elif a.severidade.value == 'atencao' %}<span class="chip warn">🟡 atenção</span>
+        {% else %}<span class="chip neutral">ℹ️ info</span>{% endif %}
+      </td>
+      <td>{{ a.mensagem }}{% if a.resolvido %} <span class="chip ok">resolvido</span>{% endif %}</td>
+      <td style="text-align:right">
+        {% if not a.resolvido %}
+        <form method="post" action="/alertas/{{ a.id }}/resolver" style="margin:0"><button type="submit" class="secundario">Marcar como visto</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}<tr><td colspan="4" class="muted">Nenhum alerta.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

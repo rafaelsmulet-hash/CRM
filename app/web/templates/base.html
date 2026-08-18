@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Jarvis{% endblock %} · Jarvis</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/htmx.min.js"></script>
+</head>
+<body>
+  {% if usuario %}
+  <header class="topbar">
+    <a class="brand" href="/">Jarvis</a>
+    <nav>
+      <a href="/" class="{{ 'ativo' if ativo == 'dashboard' else '' }}">Dashboard</a>
+      <a href="/estruturas" class="{{ 'ativo' if ativo == 'estruturas' else '' }}">Estruturas</a>
+      <a href="/orbit/importar" class="{{ 'ativo' if ativo == 'orbit' else '' }}">Importação Orbit</a>
+      <a href="/calendario" class="{{ 'ativo' if ativo == 'calendario' else '' }}">Calendário</a>
+      <a href="/alertas" class="{{ 'ativo' if ativo == 'alertas' else '' }}">Alertas</a>
+      <a href="/panoramas" class="{{ 'ativo' if ativo == 'panoramas' else '' }}">Panoramas</a>
+      {% if usuario.papel.value in ('compliance', 'admin') %}
+      <a href="/auditoria" class="{{ 'ativo' if ativo == 'auditoria' else '' }}">Auditoria</a>
+      {% endif %}
+    </nav>
+    <div class="usuario">
+      <span>{{ usuario.nome }} · {{ usuario.papel.value }}</span>
+      <form method="post" action="/auth/logout" style="margin:0"><button type="submit" class="secundario">Sair</button></form>
+    </div>
+  </header>
+  {% endif %}
+  <main class="container">
+    {% block conteudo %}{% endblock %}
+  </main>
+</body>
+</html>

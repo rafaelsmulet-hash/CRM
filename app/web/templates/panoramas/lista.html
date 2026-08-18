@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titulo %}Panoramas mensais{% endblock %}
+{% block conteudo %}
+<h1>Panoramas mensais</h1>
+<p class="subtitulo">Rascunho automático por estrutura. <strong>Nada é enviado ao cliente sem aprovação manual aqui.</strong></p>
+
+<form method="post" action="/panoramas/gerar" style="margin-bottom:1.2rem">
+  <button type="submit">Gerar panoramas do mês corrente</button>
+</form>
+
+<p>
+  <a href="/panoramas?status=rascunho" class="{{ 'btn' if status == 'rascunho' else 'btn secundario' }}">Pendentes</a>
+  <a href="/panoramas?status=aprovado" class="{{ 'btn' if status == 'aprovado' else 'btn secundario' }}">Aprovados</a>
+  <a href="/panoramas?status=rejeitado" class="{{ 'btn' if status == 'rejeitado' else 'btn secundario' }}">Rejeitados</a>
+  <a href="/panoramas?status=todos" class="{{ 'btn' if status == 'todos' else 'btn secundario' }}">Todos</a>
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Competência</th><th>Cliente</th><th>Operação</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+    {% for p in panoramas %}
+    <tr>
+      <td>{{ p.competencia }}</td>
+      <td>{{ p.cliente.nome }}</td>
+      <td>{{ p.estrutura.operacao_ref }}</td>
+      <td>
+        {% if p.status_aprovacao.value == 'rascunho' %}<span class="chip warn">pendente</span>
+        {% elif p.status_aprovacao.value == 'aprovado' %}<span class="chip ok">aprovado</span>
+        {% else %}<span class="chip neutral">rejeitado</span>{% endif %}
+      </td>
+      <td><a class="btn secundario" href="/panoramas/{{ p.id }}">revisar</a></td>
+    </tr>
+    {% else %}<tr><td colspan="5" class="muted">Nenhum panorama ainda — clique em "Gerar panoramas do mês corrente".</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jarvis
+      POSTGRES_PASSWORD: jarvis
+      POSTGRES_DB: jarvis
+    volumes:
+      - jarvis_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jarvis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://jarvis:jarvis@db:5432/jarvis
+      SECRET_KEY: ${SECRET_KEY:?defina SECRET_KEY no .env antes de subir em produção}
+      SESSION_TTL_HORAS: "12"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/app/config
+      - ./templates_mensagens:/app/templates_mensagens
+      - jarvis_data:/app/data
+
+volumes:
+  jarvis_db_data:
+  jarvis_data:

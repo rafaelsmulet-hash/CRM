@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block titulo %}Novo cliente{% endblock %}
+{% block conteudo %}
+<h1>Cadastrar cliente (exceção)</h1>
+<p class="subtitulo">Use isto só para clientes fora do Orbit. O fluxo principal é a importação.</p>
+<form class="form-vertical" method="post" action="/clientes/novo">
+  <label>Nome<input type="text" name="nome" required></label>
+  <label>Suitability<input type="text" name="suitability" placeholder="ex.: qualificado, profissional"></label>
+  <div class="acoes">
+    <button type="submit">Cadastrar</button>
+    <a class="btn secundario" href="/clientes">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
