@@ -12,7 +12,10 @@ CONFIG_DIR = RAIZ_PROJETO / "config"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    database_url: str = "postgresql+psycopg://jarvis:jarvis@localhost:5432/jarvis"
+    # Padrão: SQLite num arquivo local — zero instalação além do Python.
+    # Para produção real (multiusuário), troque no seu .env por Postgres,
+    # ex.: postgresql+psycopg://jarvis:jarvis@localhost:5432/jarvis
+    database_url: str = "sqlite:///./jarvis.db"
     secret_key: str = "troque-esta-chave-antes-de-ir-para-producao"
     session_ttl_horas: int = 12
     diretorio_importacoes: str = "./data/importacoes_orbit"

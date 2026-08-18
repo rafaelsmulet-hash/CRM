@@ -34,40 +34,65 @@ FastAPI + PostgreSQL + SQLAlchemy/Alembic + Jinja2/HTMX (server-rendered,
 sem build JS). Ver a proposta de arquitetura original para o raciocínio
 completo por trás dessas escolhas.
 
-## Rodando com Docker (recomendado para uso real)
+## Rodando só com Python (uso pessoal, no seu computador)
+
+Sem instalar Postgres, sem Docker, sem servidor — só Python 3.11+. Usa
+SQLite num arquivo local (`jarvis.db`), suficiente para um usuário só numa
+máquina só. Fica um link local (`http://localhost:8000`), que só você
+acessa.
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+
+cp .env.example .env
+# não precisa editar nada — o padrão já é SQLite local.
+# Só gere uma SECRET_KEY própria e cole no .env:
+python -c "import secrets; print(secrets.token_hex(32))"
+
+.venv/bin/alembic upgrade head
+.venv/bin/python scripts/seed_admin.py voce@email.com "Seu Nome" "senha-temporaria"
+
+.venv/bin/uvicorn app.main:app
+```
+
+Abra `http://localhost:8000` no navegador. Para rodar de novo depois, é só
+repetir o último comando (`uvicorn ...`) — os dados ficam salvos no arquivo
+`jarvis.db`, na pasta do projeto.
+
+**Limitação real desse caminho:** SQLite é um arquivo só, lido/escrito por
+um processo por vez — funciona bem para uso pessoal, mas não é para vários
+Sales Traders usando ao mesmo tempo, nem para produção real. Para isso, ver
+a seção seguinte.
+
+## Rodando com Docker + Postgres (para produção real, multiusuário)
 
 ```bash
 cp .env.example .env
-# edite .env: gere uma SECRET_KEY própria
+# edite .env: troque DATABASE_URL para Postgres (comentário já está lá) e
+# gere uma SECRET_KEY própria
 #   python -c "import secrets; print(secrets.token_hex(32))"
 
 docker compose up -d --build
 docker compose exec app python scripts/seed_admin.py voce@corretora.com "Seu Nome" "senha-temporaria"
 ```
 
-Acesse `http://localhost:8000`, faça login e troque a senha no primeiro
-acesso (ainda não há tela de troca de senha — via banco por enquanto, ver
+Acesse `http://localhost:8000` (ou o endereço do servidor onde isso estiver
+rodando), faça login e troque a senha no primeiro acesso (ainda não há
+tela de troca de senha — via banco por enquanto, ver
 `app/security.py:hash_senha`).
 
-## Rodando localmente para desenvolvimento
+Isso exige um servidor (on-prem ou nuvem) ou uma hospedagem que rode
+Docker — ver seção "Riscos e decisões pendentes" da proposta de
+arquitetura original para as implicações de colocar dado real de cliente
+numa hospedagem de terceiro.
 
-Requer Python 3.11+ e um Postgres acessível (local ou container).
+## Rodando localmente para desenvolvimento (contribuindo com o projeto)
 
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements-dev.txt
-
-cp .env.example .env  # ajuste DATABASE_URL se necessário
-
-# banco (ajuste usuário/senha/host conforme seu Postgres local)
-createdb jarvis
-createdb jarvis_test   # usado pelos testes
-
-.venv/bin/alembic upgrade head
-.venv/bin/python scripts/seed_admin.py voce@local.dev "Seu Nome" "senha-dev"
-
-.venv/bin/uvicorn app.main:app --reload
-```
+Mesma coisa do caminho "só Python" acima, mas instale as dependências de
+teste também (`requirements-dev.txt` em vez de `requirements.txt`) — os
+testes automatizados rodam contra Postgres real (não SQLite), então
+também é preciso `createdb jarvis_test` num Postgres local.
 
 ## Testes
 
