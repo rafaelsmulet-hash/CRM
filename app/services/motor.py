@@ -104,8 +104,8 @@ def _avaliar_barreiras(db: Session, estrutura: Estrutura, hoje: datetime.date, l
                     severidade=Severidade.critico,
                     mensagem=(
                         f"{estrutura.operacao_ref} ({estrutura.cliente.nome}): barreira {barreira.tipo} "
-                        f"atingida — {barreira.ativo_referencia} fechou em {ultimo_preco.preco}, "
-                        f"nível {barreira.nivel}."
+                        f"atingida — {barreira.ativo_referencia} fechou em {float(ultimo_preco.preco):.2f}, "
+                        f"nível {float(barreira.nivel):.2f}."
                     ),
                 )
             elif resultado.status_novo.value == "proxima":

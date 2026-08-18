@@ -13,8 +13,8 @@
     <h2 style="margin-top:0">Parâmetros</h2>
     <table>
       <tbody>
-        <tr><td class="muted">Notional</td><td>{{ estrutura.notional or "—" }} {{ estrutura.moeda }}</td></tr>
-        <tr><td class="muted">Valor de entrada</td><td>{{ estrutura.valor_entrada or "—" }}</td></tr>
+        <tr><td class="muted">Notional</td><td>{{ "%.2f"|format(estrutura.notional) if estrutura.notional is not none else "—" }} {{ estrutura.moeda }}</td></tr>
+        <tr><td class="muted">Valor de entrada</td><td>{{ "%.2f"|format(estrutura.valor_entrada) if estrutura.valor_entrada is not none else "—" }}</td></tr>
         <tr><td class="muted">Data início</td><td>{{ estrutura.data_inicio or "—" }}</td></tr>
         <tr><td class="muted">Vencimento</td><td>{{ estrutura.data_vencimento or "—" }}</td></tr>
       </tbody>
@@ -25,7 +25,7 @@
     <h2 style="margin-top:0">Barreiras</h2>
     {% for b in estrutura.barreiras %}
       <p>
-        <strong>{{ b.tipo }}</strong> ({{ b.direcao }}) — nível {{ b.nivel }}
+        <strong>{{ b.tipo }}</strong> ({{ b.direcao }}) — nível {{ "%.2f"|format(b.nivel) }}
         {% if b.status_atual.value == 'atingida' %}<span class="chip danger">🔴 ATINGIDA</span>
         {% elif b.status_atual.value == 'proxima' %}<span class="chip warn">🟡 PRÓXIMA</span>
         {% else %}<span class="chip neutral">⚪ NORMAL</span>{% endif %}
@@ -47,7 +47,7 @@
     <div class="quando">{{ ev.data_hora.strftime('%d/%m/%Y %H:%M') }} · {{ ev.fonte }}</div>
     <div class="desc"><strong>{{ ev.tipo_evento }}</strong>
       {% if ev.status_anterior and ev.status_novo %} — {{ ev.status_anterior }} → {{ ev.status_novo }}{% endif %}
-      {% if ev.preco_referencia %} · preço ref. {{ ev.preco_referencia }}{% endif %}
+      {% if ev.preco_referencia %} · preço ref. {{ "%.2f"|format(ev.preco_referencia) }}{% endif %}
     </div>
     <div class="muted">{{ ev.regra_utilizada }}</div>
   </li>
